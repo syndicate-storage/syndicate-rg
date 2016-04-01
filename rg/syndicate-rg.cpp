@@ -91,7 +91,7 @@ int RG_init( struct RG_core* rg, int argc, char** argv ) {
       return rc;
    }
    
-   rg->gateway = SG_CALLOC( struct SG_gateway, 1 );
+   rg->gateway = SG_gateway_new();
    if( rg->gateway == NULL ) {
       
       pthread_rwlock_destroy( &rg->lock );
