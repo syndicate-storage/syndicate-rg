@@ -1,0 +1,13 @@
+Source: syndicate-rg
+Section: utils
+Priority: optional
+Maintainer: Zack Williams, University of Arizona <zdw@cs.arizona.edu>
+Standards-Version: 3.9.5
+Build-Depends: debhelper (>= 9), pkg-config, libsyndicate1-dev, libprotobuf-dev
+
+Package: syndicate-rg
+Architecture: any
+Depends:  ${shlibs:Depends}, ${misc:Depends}, python
+Description: Syndicate Replica Gateway
+ This is a gateway that links a Syndicate volume to a persist data store.
+
