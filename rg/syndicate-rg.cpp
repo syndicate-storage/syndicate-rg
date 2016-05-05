@@ -157,9 +157,7 @@ int RG_shutdown( struct RG_core* rg ) {
    SG_safe_free( rg->gateway );
    
    pthread_rwlock_destroy( &rg->lock );
-   
-   md_shutdown();
-   
+  
    memset( rg, 0, sizeof(struct RG_core) );
    return 0;
 }
