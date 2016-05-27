@@ -138,19 +138,19 @@ if __name__ == "__main__":
          chunk = gateway.read_data( sys.stdin, size )
          if chunk is None:
             sys.exit(3)
-            
-         print >> sys.stderr, "write %s" % gateway.request_to_storage_path(request)
+           
+         gateway.log_debug("write %s (blocks %s)" % (gateway.request_to_storage_path(request), request.block_vec))
 
          # write it 
          try:
             rc = driver_mod.write_chunk( request, chunk, driver_mod.CONFIG, driver_mod.SECRETS )
          except Exception, e:
-            print >> sys.stderr, "write_chunk failed"
-            print >> sys.stderr, traceback.format_exc()
+            gateway.log_error("write_chunk failed")
+            gateway.log_error( traceback.format_exc() )
             sys.exit(4)
             
          # send back the status
-         print >> sys.stderr, "write status: %s (%s bytes)" % (rc, len(chunk))
+         gateway.log_debug("write status: %s (%s bytes)" % (rc, len(chunk)))
          gateway.write_int( sys.stdout, rc )
          sys.stdout.flush()
          sys.stderr.flush()
@@ -168,24 +168,24 @@ if __name__ == "__main__":
          chunk_fd = cStringIO.StringIO()
          rc = 0
 
-         print >> sys.stderr, "read %s" % gateway.request_to_storage_path(request)
+         gateway.log_debug("read %s" % gateway.request_to_storage_path(request))
 
          # get it 
          try:
             rc = driver_mod.read_chunk( request, chunk_fd, driver_mod.CONFIG, driver_mod.SECRETS )
          except Exception, e:
-            print >> sys.stderr, "read_chunk failed"
-            print >> sys.stderr, traceback.format_exc()
+            gateway.log_error("read_chunk failed")
+            gateway.log_error(traceback.format_exc())
             sys.exit(4)
          
          chunk = chunk_fd.getvalue()
          
          # send back the data!
-         print >> sys.stderr, "read status: %s" % rc
+         gateway.log_debug("read status: %s" % rc)
          gateway.write_int( sys.stdout, rc )
 
          if rc == 0:
-             print >> sys.stderr, "read chunk of %s bytes" % len(chunk)
+             gateway.log_debug("read chunk of %s bytes" % len(chunk))
              gateway.write_chunk( sys.stdout, chunk )
 
          sys.stdout.flush()
@@ -199,18 +199,18 @@ if __name__ == "__main__":
          request = gateway.read_request( sys.stdin )
          if request is None:
             sys.exit(3)
-        
-         print >> sys.stderr, "delete %s" % gateway.request_to_storage_path(request)
+       
+         gateway.log_debug("delete %s" % gateway.request_to_storage_path(request))
 
          try:
             rc = driver_mod.delete_chunk( request, driver_mod.CONFIG, driver_mod.SECRETS )
          except Exception, e:
-            print >> sys.stderr, "delete_chunk failed"
-            print >> sys.stderr, traceback.format_exc()
+            gateway.log_error("delete_chunk failed")
+            gateway.log_error(traceback.format_exc())
             sys.exit(4)
          
          # return the rc 
-         print >> sys.stderr, "delete status: %s" % rc
+         gateway.log_debug("delete status: %s" % rc)
          gateway.write_int( sys.stdout, rc )
          sys.stdout.flush()
          sys.stderr.flush()
