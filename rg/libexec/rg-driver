@@ -138,8 +138,16 @@ if __name__ == "__main__":
          chunk = gateway.read_data( sys.stdin, size )
          if chunk is None:
             sys.exit(3)
-           
-         gateway.log_debug("write %s (blocks %s)" % (gateway.request_to_storage_path(request), request.block_vec))
+          
+         vec_len = len(request.block_vec)
+         max_str_len = 10
+         vec_str = None
+         if vec_len > max_str_len:
+             vec_str = "[%s...]" % (",".join([str(i) for i in request.block_vec[:max_str_len]]))
+         else:
+             vec_str = "%s" % request.block_vec
+
+         gateway.log_debug("write %s (blocks %s)" % (gateway.request_to_storage_path(request), vec_str))
 
          # write it 
          try:
