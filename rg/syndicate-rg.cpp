@@ -72,6 +72,7 @@ struct SG_gateway* RG_core_gateway( struct RG_core* core ) {
 int RG_init( struct RG_core* rg, int argc, char** argv ) {
    
    int rc = 0;
+   struct SG_chunk tmp;
    struct md_opts* overrides = md_opts_new( 1 );
    if( overrides == NULL ) {
       return -ENOMEM;
@@ -113,6 +114,16 @@ int RG_init( struct RG_core* rg, int argc, char** argv ) {
       SG_safe_free( rg->gateway );
       pthread_rwlock_destroy( &rg->lock );
       return rc;
+   }
+
+   // we need a driver in order to work 
+   SG_chunk_init( &tmp, NULL, 0 );
+   rc = SG_gateway_driver_get_driver_text( rg->gateway, &tmp );
+   if( rc < 0 ) {
+      SG_error("No driver given (rc = %d)\n", rc );
+      SG_gateway_shutdown( rg->gateway );
+      pthread_rwlock_destroy( &rg->lock );
+      return -EPERM;
    }
    
    // core methods...
