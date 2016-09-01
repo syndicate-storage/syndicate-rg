@@ -26,11 +26,6 @@
 #define RG_DEFAULT_EXEC       "/usr/local/lib/syndicate/rg-driver"
 #endif
 
-#define RG_ROLE_READ          0
-#define RG_ROLE_WRITE         1
-#define RG_ROLE_DELETE        2
-#define RG_NUM_ROLES          3
-
 #define SYNDICATE_UG 1
 #define SYNDICATE_RG 2
 #define SYNDICATE_AG 3
