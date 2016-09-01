@@ -21,11 +21,12 @@
 
 #include <signal.h>
 
-#define RG_NUM_DRIVER_ROLES 3
+#define RG_NUM_DRIVER_ROLES 4
 char const* RG_DRIVER_ROLES[RG_NUM_DRIVER_ROLES] = {
    "read",
    "write",
-   "delete"
+   "delete",
+   "rename"
 };
 
 
@@ -116,7 +117,8 @@ int RG_init( struct RG_core* rg, int argc, char** argv ) {
       return rc;
    }
 
-   // we need a driver in order to work 
+   // we need a driver in order to work.
+   // verify that it exists.
    SG_chunk_init( &tmp, NULL, 0 );
    rc = SG_gateway_driver_get_driver_text( rg->gateway, &tmp );
    if( rc < 0 ) {
@@ -125,6 +127,8 @@ int RG_init( struct RG_core* rg, int argc, char** argv ) {
       pthread_rwlock_destroy( &rg->lock );
       return -EPERM;
    }
+
+   SG_chunk_free( &tmp );
    
    // core methods...
    rc = RG_server_install_methods( rg->gateway, rg );
