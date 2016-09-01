@@ -300,7 +300,13 @@ static int RG_server_block_put( struct SG_gateway* gateway, struct SG_request_da
          goto RG_server_block_put_finish;
       }
 
-      SG_debug("Request put %s\n", (driver_req.request_type() == SG_messages::DriverRequest::MANIFEST ? "manifest" : "block"));
+      if( driver_req.request_type() == SG_messages::DriverRequest::MANIFEST ) {
+         SG_debug("Request put manifest %" PRIX64 ".%" PRId64 "/manifest.%ld.%ld\n", reqdat->file_id, reqdat->file_version, reqdat->manifest_timestamp.tv_sec, reqdat->manifest_timestamp.tv_nsec );
+      }
+      else {
+         SG_debug("Request put block %" PRIX64 ".%" PRIu64 "[%" PRIu64 ".%" PRId64 "] (logical I/O (%" PRIu64 ",%" PRIu64 "))\n",
+               reqdat->file_id, reqdat->file_version, reqdat->block_id, reqdat->block_version, reqdat->io_hints.offset, reqdat->io_hints.len);
+      }
 
       rc = SG_proc_write_request( SG_proc_stdin( proc ), &driver_req );
       if( rc < 0 ) {
@@ -495,6 +501,102 @@ RG_server_block_delete_finish:
 static int RG_server_manifest_delete( struct SG_gateway* gateway, struct SG_request_data* reqdat, void* cls ) {
 
    return RG_server_block_delete( gateway, reqdat, cls );
+}
+
+
+// rename a file on the remote server
+// return 0 on success 
+// return -ENOMEM on OOM 
+// return -EIO if we get invalid data from the driver (i.e. driver error)
+// return -ENODATA if we couldn't send data to the driver (i.e. gateway error)
+static int RG_server_rename_file( struct SG_gateway* gateway, struct SG_request_data* reqdat, char const* new_path, void* cls ) {
+   
+   int rc = 0;
+   int64_t worker_rc = 0;
+   struct RG_core* core = (struct RG_core*)SG_gateway_cls( gateway );
+   struct SG_proc_group* group = NULL;
+   struct SG_proc* proc = NULL;
+   struct ms_client* ms = SG_gateway_ms( gateway );
+   SG_messages::DriverRequest driver_req; 
+  
+   // sanity check 
+   if( !SG_request_is_rename_hint( reqdat ) ) {
+      return -EINVAL;
+   }
+
+   RG_core_rlock( core );
+   
+   // find a worker 
+   group = SG_driver_get_proc_group( SG_gateway_driver(gateway), "rename" );
+   if( group != NULL ) {
+      
+      // get a free worker 
+      proc = SG_proc_group_acquire( group );
+      if( proc == NULL ) {
+         
+         // no free workers
+         SG_error("%s", "No free 'rename' workers\n" );
+
+         rc = -ENODATA;
+         goto RG_server_rename_file_finish;
+      }
+      
+      // send request 
+      rc = SG_proc_request_init( ms, reqdat, &driver_req );
+      if( rc != 0 ) {
+
+         SG_error("SG_proc_request_init rc = %d\n", rc );
+
+         rc = -ENODATA;
+         goto RG_server_rename_file_finish;
+      }
+
+      SG_debug("Request rename %" PRIX64 ".%" PRId64 " '%s' to '%s'\n", reqdat->file_id, reqdat->file_version, reqdat->fs_path, reqdat->new_path );
+
+      rc = SG_proc_write_request( SG_proc_stdin( proc ), &driver_req );
+      if( rc < 0 ) {
+
+         SG_error("SG_proc_write_request(%d) rc = %d\n", SG_proc_stdin( proc ), rc );
+         
+         rc = -ENODATA;
+         goto RG_server_rename_file_finish;
+      }
+      
+      // get the reply 
+      rc = SG_proc_read_int64( SG_proc_stdout_f( proc ), &worker_rc );
+      if( rc < 0 ) {
+         
+         SG_error("SG_proc_read_int64(%d) rc = %d\n", fileno(SG_proc_stdout_f( proc )), rc );
+         
+         rc = -EIO;
+         goto RG_server_rename_file_finish;
+      }
+      
+      SG_debug("Worker rc = %" PRId64 "\n", worker_rc );
+
+      if( worker_rc < 0 ) {
+         
+         SG_error("Request to worker %d failed, rc = %d\n", SG_proc_pid( proc ), (int)worker_rc );
+         rc = -EIO;
+         
+         goto RG_server_rename_file_finish;
+      }
+   }
+   else {
+      
+      // no renamers???
+      SG_error("%s", "BRG: no renamers started.  Cannot handle!\n");
+      rc = -ENODATA;
+   }
+   
+RG_server_rename_file_finish:
+   
+   if( group != NULL && proc != NULL ) {
+      SG_proc_group_release( group, proc );
+   }
+   
+   RG_core_unlock( core );
+   return rc;
 }
 
 
@@ -729,7 +831,9 @@ int RG_server_install_methods( struct SG_gateway* gateway, struct RG_core* core 
    
    SG_impl_delete_block( gateway, RG_server_block_delete );
    SG_impl_delete_manifest( gateway, RG_server_manifest_delete );
- 
+
+   SG_impl_rename_hint( gateway, RG_server_rename_file );
+
    SG_impl_serialize( gateway, RG_server_chunk_serialize );
    SG_impl_deserialize( gateway, RG_server_chunk_deserialize );
 
