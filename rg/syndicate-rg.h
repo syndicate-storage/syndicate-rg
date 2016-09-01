@@ -22,7 +22,9 @@
 #include <libsyndicate/client.h>
 #include <libsyndicate/opts.h>
 
+#ifndef RG_DEFAULT_EXEC
 #define RG_DEFAULT_EXEC       "/usr/local/lib/syndicate/rg-driver"
+#endif
 
 #define RG_ROLE_READ          0
 #define RG_ROLE_WRITE         1

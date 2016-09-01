@@ -5,3 +5,6 @@ export PREFIX=/usr
 
 %:
 	dh ${@}
+
+override_dh_auto_build:
+	dh_auto_build -- EXTRA_DEFS='-DRG_DEFAULT_EXEC=\"/usr/lib/syndicate/rg-driver\"'
