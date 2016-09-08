@@ -509,7 +509,7 @@ static int RG_server_manifest_delete( struct SG_gateway* gateway, struct SG_requ
 // return -ENOMEM on OOM 
 // return -EIO if we get invalid data from the driver (i.e. driver error)
 // return -ENODATA if we couldn't send data to the driver (i.e. gateway error)
-static int RG_server_rename_file( struct SG_gateway* gateway, struct SG_request_data* reqdat, char const* new_path, void* cls ) {
+static int RG_server_rename_file( struct SG_gateway* gateway, struct SG_request_data* reqdat, struct SG_chunk* serialized_manifest, char const* new_path, void* cls ) {
    
    int rc = 0;
    int64_t worker_rc = 0;
@@ -541,7 +541,7 @@ static int RG_server_rename_file( struct SG_gateway* gateway, struct SG_request_
          goto RG_server_rename_file_finish;
       }
       
-      // send request 
+      // send rename request 
       rc = SG_proc_request_init( ms, reqdat, &driver_req );
       if( rc != 0 ) {
 
@@ -562,6 +562,16 @@ static int RG_server_rename_file( struct SG_gateway* gateway, struct SG_request_
          goto RG_server_rename_file_finish;
       }
       
+      // put the manifest 
+      rc = SG_proc_write_chunk( SG_proc_stdin( proc ), serialized_manifest );
+      if( rc < 0 ) {
+       
+         SG_error("SG_proc_write_chunk(%d) rc = %d\n", SG_proc_stdin( proc ), rc );
+         
+         rc = -ENODATA;
+         goto RG_server_rename_file_finish;
+      }
+
       // get the reply 
       rc = SG_proc_read_int64( SG_proc_stdout_f( proc ), &worker_rc );
       if( rc < 0 ) {
@@ -571,7 +581,7 @@ static int RG_server_rename_file( struct SG_gateway* gateway, struct SG_request_
          rc = -EIO;
          goto RG_server_rename_file_finish;
       }
-      
+           
       SG_debug("Worker rc = %" PRId64 "\n", worker_rc );
 
       if( worker_rc < 0 ) {
