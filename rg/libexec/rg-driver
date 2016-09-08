@@ -233,12 +233,23 @@ if __name__ == "__main__":
          request = gateway.read_request( sys.stdin )
          if request is None:
             sys.exit(3)
+          
+         # read size fom stdin
+         size = gateway.read_int( sys.stdin )
+         if size is None:
+            sys.exit(3)
          
+         # remainer of stdin should be the chunk
+         chunk = gateway.read_data( sys.stdin, size )
+         if chunk is None:
+            sys.exit(3)
+
          old_path = gateway.request_path( request )
          new_path = gateway.request_new_path( request )
 
          gateway.log_debug("rename '%s' to '%s'" % (old_path, new_path))
 
+         # send rename hint
          try:
              rc = driver_mod.rename_file( request, old_path, new_path, driver_mod.CONFIG, driver_mod.SECRETS )
          except Exception, e:
@@ -246,9 +257,29 @@ if __name__ == "__main__":
              gateway.log_error( traceback.format_exc() )
              sys.exit(4)
            
+         if rc != 0:
+             # send back the status early
+             gateway.log_error("rename status: %s" % rc)
+             gateway.write_int( sys.stdout, rc )
+             sys.stdout.flush()
+             sys.stderr.flush()
+             continue
+
+         # send the new manifest
+         gateway.log_debug("write new manifest for %s" % gateway.request_to_storage_path(request))
+
+         # write the chunk 
+         try:
+             rc = driver_mod.write_chunk( request, chunk, driver_mod.CONFIG, driver_mod.SECRETS )
+         except Exception, e:
+             gateway.log_error("write_chunk failed")
+             gateway.log_error( traceback.format_exc() )
+             sys.exit(4)
+
          # send back the status
-         gateway.log_debug("rename status: %s" % rc)
+         gateway.log_debug("rename manifest status: %s" % rc)
          gateway.write_int( sys.stdout, rc )
          sys.stdout.flush()
          sys.stderr.flush()
+
 
