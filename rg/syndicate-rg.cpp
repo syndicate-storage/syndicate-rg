@@ -81,7 +81,7 @@ int RG_init( struct RG_core* rg, int argc, char** argv ) {
    
    md_opts_set_client( overrides, false );
    md_opts_set_gateway_type( overrides, SYNDICATE_RG );
-   md_opts_set_driver_config( overrides, RG_DEFAULT_EXEC, RG_DRIVER_ROLES, RG_NUM_DRIVER_ROLES ); 
+   md_opts_set_driver_config( overrides, RG_DEFAULT_EXEC, RG_DRIVER_ROLES, 1, RG_NUM_DRIVER_ROLES ); 
    
    memset( rg, 0, sizeof(struct RG_core) );
    
